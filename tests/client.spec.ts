@@ -120,6 +120,26 @@ describe('N8nClient', () => {
     expect(detailUrl).toContain('/api/v1/executions/ex-1?includeData=false')
   })
 
+  it('stops and retries executions with POST endpoints and maps the new execution', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ id: 'ex-1', mode: 'manual', status: 'canceled', startedAt: '2026-10-05T00:00:00.000Z', finished: false }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'ex-9', mode: 'retry', status: 'running', startedAt: '2026-10-05T01:00:00.000Z', retryOf: 'ex-1', workflowId: 'wf-1', finished: false }))
+    const n8n = client(fetchImpl)
+    const stopped = await n8n.stopExecution('ex-1')
+    const retried = await n8n.retryExecution('ex-1', { loadWorkflow: true })
+
+    expect(stopped).toMatchObject({ id: 'ex-1', status: 'canceled', mode: 'manual' })
+    expect(retried).toMatchObject({ id: 'ex-9', status: 'running', retryOf: 'ex-1', workflowId: 'wf-1' })
+    const [stopUrl, stopInit] = fetchImpl.mock.calls[0] as [string, RequestInit]
+    const [retryUrl, retryInit] = fetchImpl.mock.calls[1] as [string, RequestInit]
+    expect(stopUrl).toBe('https://n8n.test.invalid/api/v1/executions/ex-1/stop')
+    expect(stopInit.method).toBe('POST')
+    expect(stopInit.body).toBeUndefined()
+    expect(retryUrl).toBe('https://n8n.test.invalid/api/v1/executions/ex-1/retry')
+    expect(retryInit.method).toBe('POST')
+    expect(JSON.parse(retryInit.body as string)).toEqual({ loadWorkflow: true })
+  })
+
   it('activates and deactivates one workflow with POST endpoints', async () => {
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ id: 'wf-1', name: 'Deploy', active: true, nodes: [] }))
@@ -143,7 +163,7 @@ describe('N8nClient', () => {
 })
 
 describe('n8n endpoint policy', () => {
-  const valid = { apiKey: 'test-api-key' }
+  const valid = { apiKey: process.env.N8N_TEST_API_KEY ?? randomUUID() }
   const ok = () => new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })
   const call = (client: N8nClient) => client.listWorkflows()
 
