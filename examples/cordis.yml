@@ -1,0 +1,8 @@
+# Example dsh composition config for dsh-tool-n8n.
+# Keep the API key in a secret manager/environment-backed deployment config.
+
+- name: 'github:LJH-snow/dsh-tool-n8n'
+  config:
+    baseUrl: 'https://n8n.example.com'
+    apiKeyEnv: 'N8N_API_KEY'
+    # timeoutMs: 15000
