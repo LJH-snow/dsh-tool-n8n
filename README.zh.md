@@ -24,6 +24,8 @@ npm install @libai168/dsh-tool-n8n
 
 插件从 `apiKeyEnv` 指定的环境变量读取 n8n Public API Key（默认是 `N8N_API_KEY`）。不要把可用密钥写入源码、示例、测试或提交的配置文件。密钥在 n8n 的 **Settings > n8n API** 创建，并只授予部署所需的最小权限。
 
+`baseUrl` 默认指向本机实例 `http://localhost:5678`。每次请求前都会校验目标地址。链路本地地址（`169.254.0.0/16`、`fe80::/10`，含其 IPv4-compatible、IPv4-mapped 与 NAT64 形式）以及未指定地址（`0.0.0.0/8`、`::`）始终被拒绝——它们不可能是合法的 n8n 地址，且包含云元数据地址。自建实例默认保持可用，包括环回与内网地址。设置 `enforcePublicEndpoint: true` 可额外要求主机公网可达；该模式还会解析普通域名，并拒绝环回、私有、CGNAT、组播、保留以及全部 IANA 特殊用途地址段。
+
 ## 工具
 
 | 工具 | 说明 | 写操作 |

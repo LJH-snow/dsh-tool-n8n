@@ -24,6 +24,8 @@ Requires `@deepseek-ai/cordis` (^4.0.1) and `@deepseek-ai/dsh-tools` (^0.1.0-rc.
 
 The plugin reads the n8n public API key from the environment variable named by `apiKeyEnv` (default: `N8N_API_KEY`). Do not put a usable key in source, examples, tests, or committed configuration. Create the key in n8n under **Settings > n8n API** and grant only the permissions required by the deployment.
 
+`baseUrl` defaults to the local instance at `http://localhost:5678`. The endpoint is checked before every request. Link-local addresses (`169.254.0.0/16`, `fe80::/10`, including their IPv4-compatible, IPv4-mapped, and NAT64 forms) and the unspecified address (`0.0.0.0/8`, `::`) are always rejected: they are never a valid n8n address, and they include the cloud metadata address. Self-hosted instances stay usable by default, including loopback and private networks. Set `enforcePublicEndpoint: true` to additionally require a publicly reachable host; that mode also resolves ordinary hostnames and rejects loopback, private, CGNAT, multicast, reserved, and every IANA special-purpose range.
+
 ## Tools
 
 | Tool | Description | Write |

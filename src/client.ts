@@ -1,5 +1,7 @@
 /** n8n public REST API client with injected fetch for testability. */
 
+import { EndpointSecurityError, guardEndpoint, normalizeBaseUrl, type EndpointPolicy, type LookupImpl } from './url-security.js'
+
 export interface N8nClientOptions {
   /** n8n instance URL, for example https://n8n.example.com. */
   baseUrl?: string
@@ -8,6 +10,10 @@ export interface N8nClientOptions {
   /** Request timeout in milliseconds. 0 disables the timeout. */
   timeoutMs?: number
   fetchImpl?: typeof fetch
+  /** Require a publicly reachable endpoint and resolve hostnames. Off by default so self-hosted instances keep working. */
+  enforcePublicEndpoint?: boolean
+  /** Test-only DNS lookup override; production uses node:dns/promises. */
+  lookupImpl?: LookupImpl
 }
 
 export class N8nError extends Error {
@@ -185,12 +191,21 @@ export class N8nClient {
   private readonly apiKey: string
   private readonly timeoutMs: number
   private readonly fetchImpl: typeof fetch
+  private readonly endpointPolicy: EndpointPolicy
 
   constructor(options: N8nClientOptions = {}) {
-    this.baseUrl = (options.baseUrl ?? 'http://localhost:5678').replace(/\/+$/, '').replace(/\/api\/v1$/, '')
+    try {
+      this.baseUrl = options.enforcePublicEndpoint === true
+        ? normalizeBaseUrl(options.baseUrl, 'http://localhost:5678')
+        : (options.baseUrl ?? 'http://localhost:5678').replace(/\/+$/, '').replace(/\/api\/v1$/, '')
+    } catch (error) {
+      if (error instanceof EndpointSecurityError) throw new N8nError(error.message, 400)
+      throw error
+    }
     this.apiKey = options.apiKey ?? ''
     this.timeoutMs = options.timeoutMs ?? 15000
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch
+    this.endpointPolicy = { enforcePublicEndpoint: options.enforcePublicEndpoint === true, lookupImpl: options.lookupImpl }
   }
 
   hasCredentials(): boolean {
@@ -211,6 +226,8 @@ export class N8nClient {
     for (const [key, value] of Object.entries(options.params ?? {})) {
       if (value !== undefined && value !== '') url.searchParams.set(key, String(value))
     }
+    const blocked = await guardEndpoint(url.toString(), this.endpointPolicy)
+    if (blocked) throw new N8nError(blocked, 400)
     const headers: Record<string, string> = {
       accept: 'application/json',
       'x-n8n-api-key': this.apiKey,

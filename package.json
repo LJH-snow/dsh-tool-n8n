@@ -1,7 +1,7 @@
 {
   "name": "@libai168/dsh-tool-n8n",
   "description": "n8n workflow automation tools for DeepSeek Harness: workflow inspection, version history, tags, execution status, and explicit workflow activation controls",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",

@@ -141,3 +141,70 @@ describe('N8nClient', () => {
     await expect(client(fetchImpl).authTest()).rejects.toThrow('API key is invalid')
   })
 })
+
+describe('n8n endpoint policy', () => {
+  const valid = { apiKey: 'test-api-key' }
+  const ok = () => new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })
+  const call = (client: N8nClient) => client.listWorkflows()
+
+  it('rejects literal link-local endpoints by default, including IPv4 embedded in IPv6', async () => {
+    for (const baseUrl of [
+      'http://169.254.169.254',
+      'http://169.254.1.1',
+      'http://[fe80::1]',
+      'http://[::ffff:169.254.169.254]',
+      'http://[64:ff9b::a9fe:a9fe]',
+      'http://[::169.254.169.254]',
+      'http://0.0.0.0',
+      'http://[::]',
+    ]) {
+      const fetchImpl = vi.fn()
+      await expect(call(new N8nClient({ ...valid, baseUrl, fetchImpl }))).rejects.toBeInstanceOf(N8nError)
+      expect(fetchImpl).not.toHaveBeenCalled()
+    }
+  })
+
+  it('keeps the default loopback instance and other self-hosted endpoints working', async () => {
+    for (const baseUrl of [
+      'http://localhost:5678',
+      'http://127.0.0.1:5678',
+      'http://10.0.0.5',
+      'http://192.168.1.10',
+      'http://n8n.internal.corp',
+    ]) {
+      const fetchImpl = vi.fn(async () => ok())
+      await call(new N8nClient({ ...valid, baseUrl, fetchImpl })).catch(() => undefined)
+      expect(fetchImpl).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  it('performs no DNS work in the default mode', async () => {
+    const lookupImpl = vi.fn(async () => { throw new Error('default mode must not resolve hostnames') })
+    const fetchImpl = vi.fn(async () => ok())
+    await call(new N8nClient({ ...valid, baseUrl: 'https://n8n.internal.corp', fetchImpl, lookupImpl })).catch(() => undefined)
+    expect(lookupImpl).not.toHaveBeenCalled()
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects private and link-local endpoints when enforcePublicEndpoint is on', async () => {
+    for (const baseUrl of ['http://10.0.0.5', 'http://127.0.0.1', 'http://169.254.169.254', 'http://[fc00::1]']) {
+      const fetchImpl = vi.fn()
+      await expect(call(new N8nClient({ ...valid, baseUrl, fetchImpl, enforcePublicEndpoint: true }))).rejects.toBeInstanceOf(N8nError)
+      expect(fetchImpl).not.toHaveBeenCalled()
+    }
+  })
+
+  it('resolves and rejects blocked hostnames only when enforcePublicEndpoint is on', async () => {
+    const lookupImpl = async () => [{ address: '169.254.169.254', family: 4 as const }]
+    const fetchImpl = vi.fn()
+    await expect(call(new N8nClient({ ...valid, baseUrl: 'https://metadata.n8n.test', fetchImpl, lookupImpl, enforcePublicEndpoint: true }))).rejects.toBeInstanceOf(N8nError)
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  it('allows a public endpoint when enforcePublicEndpoint is on', async () => {
+    const lookupImpl = async () => [{ address: '93.184.216.34', family: 4 as const }]
+    const fetchImpl = vi.fn(async () => ok())
+    await call(new N8nClient({ ...valid, baseUrl: 'https://n8n.example.test', fetchImpl, lookupImpl, enforcePublicEndpoint: true })).catch(() => undefined)
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+  })
+})
