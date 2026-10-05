@@ -37,6 +37,8 @@ npm install @libai168/dsh-tool-n8n
 | `n8n_get_workflow_tags` | 查看单个工作流关联的标签元数据 | 否 |
 | `n8n_list_executions` | 查看执行状态，不返回执行 payload | 否 |
 | `n8n_get_execution` | 查看单个执行状态，不返回 payload | 否 |
+| `n8n_stop_execution` | 停止单个运行中的执行 | 是 |
+| `n8n_retry_execution` | 重试单个执行并报告新执行 | 是 |
 | `n8n_activate_workflow` | 发布/启用单个工作流 | 是 |
 | `n8n_deactivate_workflow` | 取消发布/停用单个工作流 | 是 |
 
@@ -50,7 +52,7 @@ npm install @libai168/dsh-tool-n8n
 
 ## API 范围
 
-当前版本使用 n8n Public API 做工作流元数据、版本历史元数据、工作流标签、执行查询，以及工作流发布/取消发布（当前 API 对启用/停用的命名）。版本历史和标签只映射安全元数据，不返回工作流定义、节点、凭据、连接关系或执行 payload。不猜测 webhook 触发或工作流定义修改接口，因为这些能力的可用性和权限会随 n8n 版本与部署方式变化。后续会在确认受支持版本的接口契约后，再加入显式触发工具。
+当前版本使用 n8n Public API 做工作流元数据、版本历史元数据、工作流标签、执行查询、执行停止/重试，以及工作流发布/取消发布（当前 API 对启用/停用的命名）。版本历史和标签只映射安全元数据，不返回工作流定义、节点、凭据、连接关系或执行 payload。Public API 没有触发工作流运行的端点（只能对已有执行做停止/重试），因此显式 webhook 触发不在范围内；工作流定义修改同样不覆盖。
 
 ## 开发
 

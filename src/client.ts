@@ -303,6 +303,17 @@ export class N8nClient {
     return mapExecution(raw)
   }
 
+  async stopExecution(executionId: string, signal?: AbortSignal): Promise<N8nExecutionInfo> {
+    const raw = await this.request('POST', `/api/v1/executions/${encode(executionId)}/stop`, { signal })
+    return mapExecution(raw)
+  }
+
+  async retryExecution(executionId: string, options: { loadWorkflow?: boolean; signal?: AbortSignal } = {}): Promise<N8nExecutionInfo> {
+    const body = options.loadWorkflow === undefined ? undefined : { loadWorkflow: options.loadWorkflow }
+    const raw = await this.request('POST', `/api/v1/executions/${encode(executionId)}/retry`, { body, signal: options.signal })
+    return mapExecution(raw)
+  }
+
   async setWorkflowActive(workflowId: string, active: boolean, signal?: AbortSignal): Promise<N8nWorkflowInfo> {
     const raw = await this.request('POST', `/api/v1/workflows/${encode(workflowId)}/${active ? 'publish' : 'unpublish'}`, { signal })
     return mapWorkflow(raw)

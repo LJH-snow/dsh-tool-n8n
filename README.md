@@ -37,6 +37,8 @@ The plugin reads the n8n public API key from the environment variable named by `
 | `n8n_get_workflow_tags` | Read metadata for tags attached to one workflow | No |
 | `n8n_list_executions` | List execution status records without execution payload data | No |
 | `n8n_get_execution` | Read one execution status record without payload data | No |
+| `n8n_stop_execution` | Stop one running execution | Yes |
+| `n8n_retry_execution` | Retry one execution and report the new execution | Yes |
 | `n8n_activate_workflow` | Publish/activate one workflow | Yes |
 | `n8n_deactivate_workflow` | Unpublish/deactivate one workflow | Yes |
 
@@ -50,7 +52,7 @@ The plugin reads the n8n public API key from the environment variable named by `
 
 ## API scope
 
-This version uses the n8n public API for workflow metadata, version-history metadata, workflow tags, execution inspection, and workflow publish/unpublish (the current API names for activation/deactivation). Version history and tag responses are mapped to metadata only; workflow definitions, nodes, credentials, connections, and execution payloads are not returned. It does not guess at webhook triggering or workflow-definition updates, whose availability and permissions vary by n8n version and deployment. A later version can add an explicit trigger tool after the endpoint contract is verified against supported n8n releases.
+This version uses the n8n public API for workflow metadata, version-history metadata, workflow tags, execution inspection, execution stop/retry, and workflow publish/unpublish (the current API names for activation/deactivation). Version history and tag responses are mapped to metadata only; workflow definitions, nodes, credentials, connections, and execution payloads are not returned. The public API has no endpoint for triggering a workflow run (only stop/retry of existing executions), so explicit webhook triggering is out of scope; workflow-definition updates are also not covered.
 
 ## Development
 

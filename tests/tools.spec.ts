@@ -15,6 +15,8 @@ describe('dsh-tool-n8n tools', () => {
       'n8n_get_workflow_tags',
       'n8n_list_executions',
       'n8n_get_execution',
+      'n8n_stop_execution',
+      'n8n_retry_execution',
       'n8n_activate_workflow',
       'n8n_deactivate_workflow',
     ])
@@ -58,7 +60,7 @@ describe('dsh-tool-n8n tools', () => {
     expect(executionView[0].text).toContain('status=success mode=webhook finished=yes')
   })
 
-  it('marks workflow activation and deactivation as edits', () => {
+  it('marks activation, deactivation, stop, and retry as edits', () => {
     const tools = createTools(clientForTest())
     const activate = tools.find(item => item.name === 'n8n_activate_workflow')!
     const deactivate = tools.find(item => item.name === 'n8n_deactivate_workflow')!
@@ -66,5 +68,17 @@ describe('dsh-tool-n8n tools', () => {
     expect(deactivate.presentCall({ workflowId: 'wf-1' })).toMatchObject({ kind: 'edit' })
     const view = activate.output.render({}, { ok: true, id: 'wf-1', name: 'Deploy', active: true }) as Array<{ text: string }>
     expect(view[0].text).toContain('Workflow Deploy active=yes')
+
+    const stop = tools.find(item => item.name === 'n8n_stop_execution')!
+    expect(stop.presentCall({ executionId: 'ex-1' })).toMatchObject({ kind: 'edit' })
+    const stopView = stop.output.render({}, { ok: true, id: 'ex-1', status: 'canceled', mode: 'manual' }) as Array<{ text: string }>
+    expect(stopView[0].text).toContain('Execution ex-1 status=canceled mode=manual')
+    const stopFailView = stop.output.render({}, { ok: false, reason: 'executionId is required.' }) as Array<{ text: string }>
+    expect(stopFailView[0].text).toContain('n8n execution stop failed')
+
+    const retry = tools.find(item => item.name === 'n8n_retry_execution')!
+    expect(retry.presentCall({ executionId: 'ex-1' })).toMatchObject({ kind: 'edit' })
+    const retryView = retry.output.render({}, { ok: true, id: 'ex-9', status: 'running', retryOf: 'ex-1', workflowId: 'wf-1' }) as Array<{ text: string }>
+    expect(retryView[0].text).toContain('new execution ex-9 status=running retryOf=ex-1 workflow=wf-1')
   })
 })

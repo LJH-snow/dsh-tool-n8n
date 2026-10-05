@@ -6,7 +6,7 @@
 |---|---|
 | 项目名 | `dsh-tool-n8n` |
 | 定位 | DeepSeek Harness 的 n8n 工作流自动化插件 |
-| 版本 | v0.3.0 |
+| 版本 | v0.4.0 |
 | 架构 | Cordis 插件 + `ctx.tools.register(defineTool(...))` |
 | API | n8n Public REST API v1 |
 | 认证 | `X-N8N-API-KEY` 请求头，密钥从环境变量读取 |
@@ -15,8 +15,10 @@
 
 ```text
 src/client.ts       N8nClient：fetch 注入、超时、AbortSignal、错误映射、响应脱敏
-src/index.ts        9 个 defineTool 定义与插件 apply
+src/url-security.ts baseUrl 字面量校验与可选公网端点策略
+src/index.ts        11 个 defineTool 定义与插件 apply
  tests/client.spec.ts 客户端认证、过滤、分页、历史/标签映射、状态映射、写接口测试
+ tests/security-vectors.spec.ts endpoint 安全向量测试
  tests/tools.spec.ts  工具注册、render、写操作 kind 测试
 examples/cordis.yml  dsh 组合配置示例
 ```
@@ -32,8 +34,8 @@ examples/cordis.yml  dsh 组合配置示例
 ### 2.2 工具范围
 
 - 读：认证验证、工作流列表/详情、工作流版本历史、工作流标签、执行列表/详情。
-- 写：发布、取消发布单个工作流（兼容 n8n v1 的启用/停用语义），均标记 `kind: 'edit'`。
-- 不做：批量操作、删除、凭据管理、工作流定义更新、执行 payload 输出和未经验证的 webhook 触发。
+- 写：执行停止、执行重试、发布、取消发布，均单对象并标记 `kind: 'edit'`。
+- 不做：批量操作、删除、凭据管理、工作流定义更新、执行 payload 输出。Public API 没有触发工作流运行的端点（仅支持对已有执行 stop/retry），显式 webhook 触发明确不在范围内。
 
 ### 2.3 脱敏与分页
 
@@ -54,11 +56,10 @@ npm run build
 npm pack --dry-run
 ```
 
-测试覆盖 API Key 请求头、工作流过滤和游标、工作流元数据脱敏、版本历史分页和元数据脱敏、标签元数据映射、执行 payload 脱敏、启用/停用 POST 路径、HTTP 错误、工具注册和写操作展示类型。
+测试覆盖 API Key 请求头、工作流过滤和游标、工作流元数据脱敏、版本历史分页和元数据脱敏、标签元数据映射、执行 payload 脱敏、执行停止/重试 POST 路径与 retry 新执行映射、启用/停用 POST 路径、HTTP 错误、endpoint 安全策略、工具注册和写操作展示类型。
 
 ## 4. 后续方向
 
-- 在确认受支持 n8n 版本的稳定接口后，增加显式 webhook/测试触发工具。
 - 增加项目级过滤和更细的权限/角色说明。
 - 根据 n8n API 版本变化补充兼容性测试。
 

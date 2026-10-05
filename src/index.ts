@@ -226,6 +226,44 @@ export function createTools(client: N8nClient) {
     }),
 
     defineTool({
+      name: 'n8n_stop_execution',
+      description: 'Stop one running n8n execution. WRITE operation; single-execution only.',
+      parameters: { executionId: { type: 'string', required: true, description: 'n8n execution ID' } },
+      output: {
+        schema: { type: 'object', additionalProperties: false, properties: { ok: { type: 'boolean' }, reason: { type: 'string' }, id: { type: 'string' }, status: { type: 'string' }, mode: { type: 'string' }, startedAt: { type: 'string' }, stoppedAt: { type: 'string' } } },
+        render: (_args, value) => value.ok ? text(`Execution ${value.id ?? ''} status=${value.status ?? ''} mode=${value.mode ?? ''}`) : text(`n8n execution stop failed: ${value.reason ?? ''}`),
+      },
+      presentCall(args): ToolCallView { return { card: 'generic', title: `Stop n8n execution ${args.executionId ?? ''}`, kind: 'edit' } },
+      async execute(args, exec) {
+        if (!client.hasCredentials()) return { ok: false, reason: 'n8n API key is not configured.' }
+        if (!args.executionId) return { ok: false, reason: 'executionId is required.' }
+        try { return { ok: true, ...await client.stopExecution(args.executionId as string, exec.signal) } }
+        catch (error) { return { ok: false, reason: errorReason(error) } }
+      },
+    }),
+
+    defineTool({
+      name: 'n8n_retry_execution',
+      description: 'Retry one n8n execution and report the new execution it started. WRITE operation; single-execution only.',
+      parameters: {
+        executionId: { type: 'string', required: true, description: 'n8n execution ID to retry' },
+        loadWorkflow: { type: 'boolean', description: 'Retry with the currently saved workflow version instead of the one saved at execution time' },
+      },
+      output: {
+        schema: { type: 'object', additionalProperties: false, properties: { ok: { type: 'boolean' }, reason: { type: 'string' }, id: { type: 'string' }, status: { type: 'string' }, mode: { type: 'string' }, retryOf: { type: 'string' }, workflowId: { type: 'string' }, startedAt: { type: 'string' } } },
+        render: (_args, value) => value.ok ? text(`Retry started: new execution ${value.id ?? ''} status=${value.status ?? ''} retryOf=${value.retryOf ?? ''}${value.workflowId ? ` workflow=${value.workflowId}` : ''}`) : text(`n8n execution retry failed: ${value.reason ?? ''}`),
+      },
+      presentCall(args): ToolCallView { return { card: 'generic', title: `Retry n8n execution ${args.executionId ?? ''}`, kind: 'edit' } },
+      async execute(args, exec) {
+        if (!client.hasCredentials()) return { ok: false, reason: 'n8n API key is not configured.' }
+        if (!args.executionId) return { ok: false, reason: 'executionId is required.' }
+        try {
+          return { ok: true, ...await client.retryExecution(args.executionId as string, { loadWorkflow: args.loadWorkflow as boolean, signal: exec.signal }) }
+        } catch (error) { return { ok: false, reason: errorReason(error) } }
+      },
+    }),
+
+    defineTool({
       name: 'n8n_activate_workflow',
       description: 'Activate one n8n workflow. WRITE operation; single-workflow only.',
       parameters: { workflowId: { type: 'string', required: true, description: 'n8n workflow ID' } },
